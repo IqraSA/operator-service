@@ -12,8 +12,7 @@ FAKE_UUID = "fake-uuid"
 @pytest.fixture
 def client():
     app.testing = True
-    client = app.test_client()
-    yield client
+    yield app.test_client()
 
 
 @pytest.fixture(autouse=True)

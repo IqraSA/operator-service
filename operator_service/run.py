@@ -21,9 +21,7 @@ def get_version():
 
 @app.route("/")
 def version():
-    info = dict()
-    info["software"] = Metadata.TITLE
-    info["version"] = get_version()
+    info = {"software": Metadata.TITLE, "version": get_version()}
     info["address"] = os.getenv("OPERATOR_ADDRESS", None)
     info["algoTimeLimit"] = os.getenv("ALGO_POD_TIMEOUT", None)
     info["storageExpiry"] = os.getenv("STORAGE_EXPIRY", None)
@@ -45,9 +43,10 @@ operator_url = config.get(ConfigSections.RESOURCES, "operator.url")
 # Call factory function to create our blueprint
 swaggerui_blueprint = get_swaggerui_blueprint(
     BaseURLs.SWAGGER_URL,
-    operator_url + "/spec",
-    config={"app_name": "Test application"},  # Swagger UI config overrides
+    f"{operator_url}/spec",
+    config={"app_name": "Test application"},
 )
+
 
 # Register blueprint at URL
 app.register_blueprint(swaggerui_blueprint, url_prefix=BaseURLs.SWAGGER_URL)

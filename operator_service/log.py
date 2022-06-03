@@ -14,13 +14,11 @@ import yaml
 
 def setup_logging(log_config_path=None, log_level=None):
     """Logging Setup"""
-    env_log_level = os.getenv("LOG_LEVEL", None)
-    if env_log_level:
+    if env_log_level := os.getenv("LOG_LEVEL", None):
         print(f"env var LOG_LEVEL detected = {env_log_level}")
         log_level = env_log_level
 
-    env_log_config_path = os.getenv("LOG_CFG", None)
-    if env_log_config_path:
+    if env_log_config_path := os.getenv("LOG_CFG", None):
         print(f"env var LOG_CFG detected = {env_log_config_path}")
         log_config_path = env_log_config_path
 
@@ -36,5 +34,5 @@ def setup_logging(log_config_path=None, log_level=None):
             log_config_dict = yaml.safe_load(f.read())
             logging.config.dictConfig(log_config_dict)
     else:
-        print(f"Using default logging config, log level = INFO")
+        print("Using default logging config, log level = INFO")
         logging.basicConfig(format="%(asctime)s %(message)s", level=logging.INFO)

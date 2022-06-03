@@ -27,30 +27,30 @@ def generate_new_id():
 
 
 def create_compute_job(workflow, execution_id, group, version, namespace):
-    execution = dict()
-    execution["apiVersion"] = group + "/" + version
-    execution["kind"] = "WorkFlow"
-    execution["metadata"] = dict()
+    execution = {
+        "apiVersion": f"{group}/{version}",
+        "kind": "WorkFlow",
+        "metadata": {},
+    }
+
     execution["metadata"]["name"] = execution_id
     execution["metadata"]["namespace"] = namespace
-    execution["metadata"]["labels"] = dict()
+    execution["metadata"]["labels"] = {}
     execution["metadata"]["labels"]["workflow"] = execution_id
-    execution["spec"] = dict()
+    execution["spec"] = {}
     execution["spec"]["metadata"] = workflow
     return execution
 
 
 def check_required_attributes(required_attributes, data, method):
-    logger.debug("got %s request: %s" % (method, data))
+    logger.debug(f"got {method} request: {data}")
     if not data or not isinstance(data, dict):
-        logger.error("%s request failed: data is empty." % method)
+        logger.error(f"{method} request failed: data is empty.")
         return "payload seems empty.", 400
 
     for attr in required_attributes:
         if attr not in data:
-            logger.error(
-                "%s request failed: required attr %s missing." % (method, attr)
-            )
+            logger.error(f"{method} request failed: required attr {attr} missing.")
             return '"%s" is required in the call to %s' % (attr, method), 400
 
     return None, None
@@ -63,9 +63,9 @@ def get_signer(signature, message):
 
     signature_bytes = Web3.toBytes(hexstr=signature)
     if signature_bytes[64] == 27:
-        new_signature = b"".join([signature_bytes[0:64], b"\x00"])
+        new_signature = b"".join([signature_bytes[:64], b"\x00"])
     elif signature_bytes[64] == 28:
-        new_signature = b"".join([signature_bytes[0:64], b"\x01"])
+        new_signature = b"".join([signature_bytes[:64], b"\x01"])
     else:
         new_signature = signature_bytes
     signature = keys.Signature(signature_bytes=new_signature)
@@ -83,7 +83,7 @@ def get_signer(signature, message):
 
 def process_provider_signature_validation(signature, original_msg, nonce):
     if not signature or not original_msg:
-        return f"`providerSignature` of agreementId is required.", 400, None
+        return "`providerSignature` of agreementId is required.", 400, None
     original_msg = f"{original_msg}{nonce}"
     try:
         address = get_signer(signature, original_msg)
@@ -118,14 +118,13 @@ def get_list_of_allowed_providers():
 
 def is_verify_signature_required():
     try:
-        return bool(int(os.environ.get("SIGNATURE_REQUIRED", 0)) == 1)
+        return int(os.environ.get("SIGNATURE_REQUIRED", 0)) == 1
     except ValueError:
         return False
 
 
 def get_compute_resources():
-    resources = dict()
-    resources["inputVolumesize"] = os.environ.get("inputVolumesize", "1Gi")
+    resources = {"inputVolumesize": os.environ.get("inputVolumesize", "1Gi")}
     resources["outputVolumesize"] = os.environ.get("outputVolumesize", "1Gi")
     resources["adminlogsVolumesize"] = os.environ.get("adminlogsVolumesize", "1Gi")
     resources["requests_cpu"] = os.environ.get("requests_cpu", "200m")
@@ -136,9 +135,7 @@ def get_compute_resources():
 
 
 def get_namespace_configs():
-    resources = dict()
-    resources["namespace"] = os.environ.get("DEFAULT_NAMESPACE", "ocean-compute")
-    return resources
+    return {"namespace": os.environ.get("DEFAULT_NAMESPACE", "ocean-compute")}
 
 
 def build_download_response(request, requests_session, url, content_type=None):
@@ -212,9 +209,7 @@ def sanitize_response_for_provider(d):
     in: dict | list | tuple | set | str | int | float | None
     out: dict | list | tuple | set | str | int | float | None
     """
-    if isinstance(d, Decimal):
-        return str(d)
-    elif isinstance(d, float):
+    if isinstance(d, (Decimal, float)):
         return str(d)
     elif isinstance(d, dict):
         return {

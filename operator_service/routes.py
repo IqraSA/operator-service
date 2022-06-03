@@ -130,7 +130,7 @@ def start_compute_job():
         description: Some error
     """
 
-    data = request.args if request.args else request.json
+    data = request.args or request.json
     required_attributes = [
         "workflow",
         "agreementId",
@@ -150,17 +150,15 @@ def start_compute_job():
     if not workflow:
         return Response(
             json.dumps(
-                {
-                    "error": f"`workflow` is required in the payload and must "
-                    f"include workflow stages"
-                }
+                {"error": "`workflow` is required in the payload and must "}
             ),
             400,
             headers=standard_headers,
         )
+
     environment = data.get("environment")
     if not check_environment_exists(environment):
-        logger.error(f"Environment invalid or does not exists")
+        logger.error("Environment invalid or does not exists")
         return Response(
             json.dumps({"error": "Environment invalid or does not exists"}),
             400,
@@ -175,12 +173,12 @@ def start_compute_job():
 
     stages = workflow.get("stages")
     if not stages:
-        logger.error(f"Missing stages")
+        logger.error("Missing stages")
         return Response(
             json.dumps({"error": "Missing stages"}), 400, headers=standard_headers
         )
     if len(stages) > 1:
-        logger.error(f"Multiple stages are not supported yet")
+        logger.error("Multiple stages are not supported yet")
         return Response(
             json.dumps({"error": "Multiple stages are not supported yet"}),
             400,
@@ -244,7 +242,7 @@ def stop_compute_job():
         description: nonce
     """
     try:
-        data = request.args if request.args else request.json
+        data = request.args or request.json
         required_attributes = ["owner", "providerSignature", "nonce"]
         msg, status = check_required_attributes(
             required_attributes, data, "PUT:/compute"
@@ -254,7 +252,7 @@ def stop_compute_job():
                 json.dumps({"error": msg}), status, headers=standard_headers
             )
         if data is None:
-            msg = f"You have to specify one of agreementId, jobId or owner"
+            msg = "You have to specify one of agreementId, jobId or owner"
             return Response(json.dumps({"error": msg}), 400, headers=standard_headers)
 
         agreement_id = data.get("agreementId", None)
@@ -269,15 +267,12 @@ def stop_compute_job():
         if not owner or len(owner) < 2:
             owner = None
         if owner is None and agreement_id is None and job_id is None:
-            msg = f"You have to specify one of agreementId, jobId or owner"
+            msg = "You have to specify one of agreementId, jobId or owner"
             logger.error(msg)
             return Response(json.dumps({"error": msg}), 400, headers=standard_headers)
         nonce = data.get("nonce")
         # verify provider's signature
-        if job_id:
-            sign_message = f"{owner}{job_id}"
-        else:
-            sign_message = f"{owner}"
+        sign_message = f"{owner}{job_id}" if job_id else f"{owner}"
         msg, status, provider_address = process_provider_signature_validation(
             data.get("providerSignature"), sign_message, nonce
         )
@@ -374,9 +369,9 @@ def get_compute_job_status():
         description: Error
     """
     try:
-        data = request.args if request.args else request.json
+        data = request.args or request.json
         if data is None:
-            msg = f"You have to specify one of agreementId, jobId or owner"
+            msg = "You have to specify one of agreementId, jobId or owner"
             return Response(json.dumps({"error": msg}), 400, headers=standard_headers)
         agreement_id = data.get("agreementId", None)
         owner = data.get("owner", None)
@@ -392,16 +387,13 @@ def get_compute_job_status():
             owner = None
 
         if owner is None and agreement_id is None and job_id is None:
-            msg = f"You have to specify one of agreementId, jobId or owner"
+            msg = "You have to specify one of agreementId, jobId or owner"
             logger.error(msg)
             return Response(json.dumps({"error": msg}), 400, headers=standard_headers)
 
         nonce = data.get("nonce", None)
         # verify provider's signature
-        if job_id:
-            sign_message = f"{owner}{job_id}"
-        else:
-            sign_message = f"{owner}"
+        sign_message = f"{owner}{job_id}" if job_id else f"{owner}"
         msg, status, provider_address = process_provider_signature_validation(
             data.get("providerSignature"), sign_message, nonce
         )
@@ -490,9 +482,9 @@ def get_indexed_result():
     """
     try:
         requests_session = get_requests_session()
-        data = request.args if request.args else request.json
+        data = request.args or request.json
         if data is None:
-            msg = f"Both index & job_id are required"
+            msg = "Both index & job_id are required"
             return Response(json.dumps({"error": msg}), 400, headers=standard_headers)
         required_attributes = ["owner", "providerSignature", "nonce", "index", "jobId"]
         msg, status = check_required_attributes(
@@ -524,7 +516,7 @@ def get_indexed_result():
             return Response(json.dumps({"error": msg}), 404, headers=standard_headers)
         # check the index
         logger.info(f"Len outputs {len(outputs)}, index: {index}")
-        if int(index) >= len(outputs):
+        if index >= len(outputs):
             msg = f"No such index {index} in this compute job"
             return Response(json.dumps({"error": msg}), 404, headers=standard_headers)
         logger.info(f"Trying: {outputs[index]['url']}")
