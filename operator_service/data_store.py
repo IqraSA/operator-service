@@ -11,7 +11,7 @@ logger.setLevel(logging.DEBUG)
 
 def get_sql_status(agreement_id, job_id, owner):
     # enforce strings
-    params = dict()
+    params = {}
     select_query = """
     SELECT agreementId, workflowId, owner, status, statusText, 
         extract(epoch from dateCreated) as dateCreated, 
@@ -21,15 +21,15 @@ def get_sql_status(agreement_id, job_id, owner):
     """
 
     if agreement_id is not None:
-        select_query = select_query + " AND agreementId=%(agreementId)s"
+        select_query += " AND agreementId=%(agreementId)s"
         params["agreementId"] = str(agreement_id)
 
     if job_id is not None:
-        select_query = select_query + " AND workflowId=%(jobId)s"
+        select_query += " AND workflowId=%(jobId)s"
         params["jobId"] = str(job_id)
 
     if owner is not None:
-        select_query = select_query + " AND owner=%(owner)s"
+        select_query += " AND owner=%(owner)s"
         params["owner"] = str(owner)
 
     result = []
@@ -38,18 +38,17 @@ def get_sql_status(agreement_id, job_id, owner):
         return result
 
     for row in rows:
-        temprow = dict()
-        temprow["agreementId"] = row[0]
-        temprow["jobId"] = row[1]
-        temprow["owner"] = row[2]
-        temprow["status"] = row[3]
-        temprow["statusText"] = row[4]
-        temprow["dateCreated"] = row[5]
-        temprow["dateFinished"] = row[6]
-        # temprow['configlogUrl']=row[7]
-        # temprow['publishlogUrl']=row[8]
-        # temprow['algorithmLogUrl'] = row[9]
-        temprow["results"] = ""
+        temprow = {
+            "agreementId": row[0],
+            "jobId": row[1],
+            "owner": row[2],
+            "status": row[3],
+            "statusText": row[4],
+            "dateCreated": row[5],
+            "dateFinished": row[6],
+            "results": "",
+        }
+
         if row[10] and len(str(row[10])) > 2:
             # need to filter url from object
             outputs = json.loads(str(row[10]))
@@ -69,7 +68,7 @@ def get_sql_status(agreement_id, job_id, owner):
             temprow["algoDID"] = stage["algorithm"]["id"]
         else:
             temprow["algoDID"] = "raw"
-        temprow["inputDID"] = list()
+        temprow["inputDID"] = []
         for input in stage["input"]:
             if "id" in input:
                 temprow["inputDID"].append(input["id"])
@@ -78,15 +77,13 @@ def get_sql_status(agreement_id, job_id, owner):
 
 
 def get_sql_job_urls(job_id):
-    # get outputsURL & job owner as a tuple
-    params = dict()
     select_query = """
     SELECT owner, outputsURL FROM jobs WHERE workflowId=%(jobId)s
     """
     if job_id is None:
         return None, None
 
-    params["jobId"] = str(job_id)
+    params = {"jobId": str(job_id)}
     rows = _execute_query(select_query, params, "get_sql_job_urls", get_rows=True)
     if not rows or len(rows) < 1:
         return None, None
@@ -99,16 +96,16 @@ def get_sql_job_urls(job_id):
 
 
 def get_sql_jobs(agreement_id, job_id, owner):
-    params = dict()
+    params = {}
     select_query = "SELECT workflowId FROM jobs WHERE 1=1"
     if agreement_id is not None:
-        select_query = select_query + " AND agreementId=%(agreementId)s"
+        select_query += " AND agreementId=%(agreementId)s"
         params["agreementId"] = str(agreement_id)
     if job_id is not None:
-        select_query = select_query + " AND workflowId=%(jobId)s"
+        select_query += " AND workflowId=%(jobId)s"
         params["jobId"] = str(job_id)
     if owner is not None:
-        select_query = select_query + " AND owner=%(owner)s"
+        select_query += " AND owner=%(owner)s"
         params["owner"] = str(owner)
     try:
         rows = _execute_query(select_query, params, "get_sql_jobs", get_rows=True)
@@ -122,7 +119,7 @@ def get_sql_jobs(agreement_id, job_id, owner):
 
 def get_sql_running_jobs():
     # enforce strings
-    params = dict()
+    params = {}
     select_query = """
     SELECT agreementId, workflowId, owner, status, statusText, 
         extract(epoch from dateCreated) as dateCreated, 
@@ -133,30 +130,32 @@ def get_sql_running_jobs():
     if not rows:
         return result
     for row in rows:
-        temprow = dict()
-        temprow["agreementId"] = row[0]
-        temprow["jobId"] = row[1]
-        temprow["owner"] = row[2]
-        temprow["status"] = row[3]
-        temprow["statusText"] = row[4]
-        temprow["dateCreated"] = row[5]
-        temprow["namespace"] = row[6]
+        temprow = {
+            "agreementId": row[0],
+            "jobId": row[1],
+            "owner": row[2],
+            "status": row[3],
+            "statusText": row[4],
+            "dateCreated": row[5],
+            "namespace": row[6],
+        }
+
         workflow_dict = json.loads(row[7])
         stage = workflow_dict["spec"]["metadata"]["stages"][0]
         if "id" in stage["algorithm"]:
             temprow["algoDID"] = stage["algorithm"]["id"]
         else:
             temprow["algoDID"] = "raw"
-        temprow["inputDID"] = list()
-        for input in stage["input"]:
-            if "id" in input:
-                temprow["inputDID"].append(input["id"])
+        temprow["inputDID"] = [
+            input["id"] for input in stage["input"] if "id" in input
+        ]
+
         result.append(temprow)
     return result
 
 
 def get_sql_environments(logger):
-    params = dict()
+    params = {}
     select_query = """
     SELECT namespace, status,extract(epoch from lastping) as lastping from envs
     """
@@ -173,18 +172,14 @@ def get_sql_environments(logger):
 
 
 def check_environment_exists(environment):
-    params = dict()
     select_query = """
     SELECT namespace, status,extract(epoch from lastping) as lastping from envs WHERE namespace=%(env)s
     """
-    params["env"] = environment
+    params = {"env": environment}
     rows = _execute_query(
         select_query, params, "check_environment_exists", get_rows=True
     )
-    if not rows:
-        return False
-    else:
-        return True
+    return bool(rows)
 
 
 def create_sql_job(agreement_id, job_id, owner, body, namespace, provider_address):
